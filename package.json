@@ -1,22 +1,29 @@
 {
   "name": "relationship-web-builder",
+  "version": "0.1.0",
   "private": true,
-  "version": "0.0.0",
+  "main": "main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "electron .",
+    "start:dev": "concurrently \"vite\" \"electron .\""
   },
   "dependencies": {
+    "html-to-image": "^1.11.11",
+    "jspdf": "^2.5.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "reactflow": "^11.11.4",
-    "html-to-image": "^1.11.11",
-    "jspdf": "^2.5.1"
+    "reactflow": "^11.11.4"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^4.6.0",
+    "concurrently": "^9.2.0",
+    "electron": "^37.2.1",
+    "electron-is-dev": "^3.0.1",
     "typescript": "~5.7.2",
     "vite": "^6.2.0"
   }

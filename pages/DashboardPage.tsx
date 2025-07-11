@@ -8,9 +8,10 @@ interface DashboardPageProps {
   cases: Case[];
   onOpenCase: (caseId: string) => void;
   onNewCase: () => void;
+  onDeleteCase: (caseId: string) => void;
 }
 
-const DashboardPage: React.FC<DashboardPageProps> = ({ cases, onOpenCase, onNewCase }) => {
+const DashboardPage: React.FC<DashboardPageProps> = ({ cases, onOpenCase, onNewCase, onDeleteCase }) => {
   const totalCases = cases.length;
   const activeCases = cases.filter(c => c.status === 'Ativo').length;
   const totalPeople = cases.reduce((sum, c) => sum + c.nodes.length, 0);
@@ -56,7 +57,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ cases, onOpenCase, onNewC
         {recentCases.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {recentCases.map((caseItem) => (
-              <CaseCard key={caseItem.id} caseData={caseItem} onOpenWeb={() => onOpenCase(caseItem.id)} onViewDetails={() => alert(`Detalhes do caso: ${caseItem.title}`)} />
+              <CaseCard 
+                key={caseItem.id} 
+                caseData={caseItem} 
+                onOpenWeb={() => onOpenCase(caseItem.id)} 
+                onViewDetails={() => alert(`Detalhes do caso: ${caseItem.title}`)}
+                onDelete={() => onDeleteCase(caseItem.id)}
+              />
             ))}
           </div>
         ) : (

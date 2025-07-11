@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { ReactFlowProvider } from 'reactflow';
 import MainLayout from './components/layout/MainLayout';
 import DashboardPage from './pages/DashboardPage';
@@ -7,11 +7,48 @@ import { Case, ViewId, SidebarStats } from './types';
 import { MOCK_CASES, NAVIGATION_ITEMS } from './constants';
 
 const Shell: React.FC = () => {
-  const [cases, setCases] = useState<Case[]>(MOCK_CASES);
+  const [cases, setCases] = useState<Case[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [currentView, setCurrentView] = useState<ViewId>('dashboard');
-  const [activeCaseId, setActiveCaseId] = useState<string | null>(
-    MOCK_CASES.length > 0 ? MOCK_CASES[0].id : null // Default to first case for editor if switching directly
-  );
+  const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
+
+  // Efeito para carregar os dados na inicialização
+  useEffect(() => {
+    window.electronAPI.loadData().then(loadedCases => {
+      if (loadedCases && loadedCases.length > 0) {
+        setCases(loadedCases);
+        // Define o primeiro caso como ativo se nenhum estiver
+        if (!activeCaseId) {
+          setActiveCaseId(loadedCases[0].id);
+        }
+      } else {
+        // Se não houver dados salvos, carrega os dados mock
+        setCases(MOCK_CASES);
+        if (MOCK_CASES.length > 0) {
+          setActiveCaseId(MOCK_CASES[0].id);
+        }
+      }
+      setIsDataLoaded(true);
+    }).catch(error => {
+      console.error("Erro ao carregar dados via Electron API:", error);
+      // Fallback para mocks em caso de erro
+      setCases(MOCK_CASES);
+      if (MOCK_CASES.length > 0) {
+        setActiveCaseId(MOCK_CASES[0].id);
+      }
+      setIsDataLoaded(true);
+    });
+  }, []); // O array vazio garante que isso rode apenas uma vez
+
+  // Efeito para salvar os dados sempre que 'cases' mudar
+  useEffect(() => {
+    // Só salva depois que os dados iniciais foram carregados para não sobrescrever
+    // o arquivo com um estado inicial vazio antes do carregamento.
+    if (isDataLoaded) {
+      window.electronAPI.saveData(cases);
+    }
+  }, [cases, isDataLoaded]);
+
 
   const handleNavigation = (viewId: ViewId) => {
     setCurrentView(viewId);
@@ -20,33 +57,44 @@ const Shell: React.FC = () => {
   const handleOpenCaseInEditor = useCallback((caseId: string) => {
     setActiveCaseId(caseId);
     setCurrentView('web-editor');
-  }, []);
+  }, []); // Os setters do useState são estáveis e não precisam ser listados.
 
   const handleCreateNewCase = useCallback(() => {
-    // Basic new case creation logic
-    const newCaseId = `case-${Date.now()}`;
-    const newCase: Case = {
-      id: newCaseId,
-      title: `Novo Caso ${cases.length + 1}`,
-      status: 'Pendente',
-      creationDate: new Date().toISOString(),
-      lastModifiedDate: new Date().toISOString(),
-      nodes: [],
-      edges: [],
-      description: 'Preencha os detalhes deste novo caso.',
-    };
-    setCases(prevCases => [newCase, ...prevCases]); // Add to top
-    setActiveCaseId(newCaseId);
-    setCurrentView('web-editor'); // Open new case in editor
-    alert(`Novo caso "${newCase.title}" criado e aberto no editor.`);
-  }, [cases]);
-  
+    setCases(prevCases => {
+      const newCaseId = `case-${Date.now()}`;
+      const newCase: Case = {
+        id: newCaseId,
+        title: `Novo Caso ${prevCases.length + 1}`,
+        status: 'Pendente',
+        creationDate: new Date().toISOString(),
+        lastModifiedDate: new Date().toISOString(),
+        nodes: [],
+        edges: [],
+        description: 'Preencha os detalhes deste novo caso.',
+      };
+      
+      setActiveCaseId(newCaseId);
+      setCurrentView('web-editor');
+      alert(`Novo caso "${newCase.title}" criado e aberto no editor.`);
+      
+      return [newCase, ...prevCases];
+    });
+  }, []); // Usando a forma funcional do setCases para evitar a dependência 'cases'.
+
   const handleUpdateCase = useCallback((updatedCase: Case) => {
     setCases(prevCases => 
       prevCases.map(c => c.id === updatedCase.id ? updatedCase : c)
     );
-    // Optionally, provide feedback to the user
-    // console.log(`Case "${updatedCase.title}" updated.`);
+  }, []); // A forma funcional do setCases garante que temos sempre o estado mais recente.
+
+  const handleDeleteCase = useCallback((caseId: string) => {
+    // Adiciona uma confirmação antes de deletar
+    const confirmation = window.confirm("Você tem certeza que deseja deletar este caso? Esta ação não pode ser desfeita.");
+    if (confirmation) {
+      setCases(prevCases => prevCases.filter(c => c.id !== caseId));
+      // Se o caso deletado era o ativo, limpa o activeCaseId
+      setActiveCaseId(prevActiveId => prevActiveId === caseId ? null : prevActiveId);
+    }
   }, []);
 
   const activeCase = useMemo(() => {
@@ -78,6 +126,7 @@ const Shell: React.FC = () => {
             cases={cases}
             onOpenCase={handleOpenCaseInEditor}
             onNewCase={handleCreateNewCase}
+            onDeleteCase={handleDeleteCase}
           />
         );
       case 'web-editor':

@@ -1,14 +1,15 @@
 import React from 'react';
 import { Case } from '../../types';
-import { OpenWebIcon, ViewDetailsIcon, UserIcon, CalendarIcon } from '../../constants';
+import { OpenWebIcon, ViewDetailsIcon, UserIcon, CalendarIcon, DeleteIcon } from '../../constants';
 
 interface CaseCardProps {
   caseData: Case;
   onOpenWeb: (caseId: string) => void;
   onViewDetails: (caseId: string) => void;
+  onDelete: (caseId: string) => void;
 }
 
-const CaseCard: React.FC<CaseCardProps> = ({ caseData, onOpenWeb, onViewDetails }) => {
+const CaseCard: React.FC<CaseCardProps> = ({ caseData, onOpenWeb, onViewDetails, onDelete }) => {
   const getStatusColor = (status: Case['status']) => {
     switch (status) {
       case 'Ativo': return 'bg-green-100 text-green-700 border-green-300';
@@ -84,6 +85,13 @@ const CaseCard: React.FC<CaseCardProps> = ({ caseData, onOpenWeb, onViewDetails 
           aria-label={`Ver detalhes do caso ${caseData.title}`}
         >
           <ViewDetailsIcon className="h-5 w-5" />
+        </button>
+        <button
+          onClick={() => onDelete(caseData.id)}
+          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-md transition-colors duration-150"
+          aria-label={`Deletar caso ${caseData.title}`}
+        >
+          <DeleteIcon className="h-5 w-5" />
         </button>
       </div>
     </div>

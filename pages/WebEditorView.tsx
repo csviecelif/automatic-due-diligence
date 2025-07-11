@@ -317,6 +317,8 @@ const WebEditorView: React.FC<WebEditorViewProps> = ({ initialCaseData, onSaveCh
       nodes,
       edges,
       lastModifiedDate: new Date().toISOString(),
+      // Se o caso era 'Pendente', muda para 'Ativo' na primeira vez que for salvo.
+      status: initialCaseData.status === 'Pendente' ? 'Ativo' : initialCaseData.status,
     };
     onSaveChanges(updatedCaseData);
     alert(`Alterações salvas para o caso: ${editorTitle}`);
