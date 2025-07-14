@@ -21,7 +21,7 @@ import ReactFlow, {
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { PersonNodeData, RelationshipEdgeData, WebEditorTheme, Case, RelationshipStrength } from '../types';
-import { WEB_EDITOR_THEMES, DEFAULT_PHOTO_URL, RELATIONSHIP_TYPE_DEFINITIONS, ExportIcon } from '../constants';
+import { WEB_EDITOR_THEMES, DEFAULT_PHOTO_URL, RELATIONSHIP_TYPE_DEFINITIONS, ExportIcon, MaximizeIcon, MinimizeIcon } from '../constants';
 import CustomNode from '../components/CustomNode';
 import EditPanel from '../components/webeditor/EditPanel';
 
@@ -33,6 +33,8 @@ interface WebEditorViewProps {
   onCloseEditor: () => void;
   activeTheme: WebEditorTheme;
   setActiveTheme: (theme: WebEditorTheme) => void;
+  isFullScreen: boolean;
+  toggleFullScreen: () => void;
 }
 
 let nodeIdCounter = 0;
@@ -42,7 +44,14 @@ const INTER_FONT_FACES = `
   /* Font faces remain the same */
 `;
 
-const WebEditorView: React.FC<WebEditorViewProps> = ({ initialCaseData, onSaveChanges, onCloseEditor, activeTheme, setActiveTheme }) => {
+const WebEditorView: React.FC<WebEditorViewProps> = ({ 
+  initialCaseData, 
+  onSaveChanges, 
+  onCloseEditor, 
+  activeTheme, 
+  isFullScreen,
+  toggleFullScreen
+}) => {
   const [nodes, setNodes, onNodesChangeInternal] = useNodesState<PersonNodeData>([]);
   const [edges, setEdges, onEdgesChangeInternal] = useEdgesState<RelationshipEdgeData>([]);
   
@@ -195,7 +204,7 @@ const WebEditorView: React.FC<WebEditorViewProps> = ({ initialCaseData, onSaveCh
 
   useEffect(() => {
     fitView({ padding: 0.2, duration: 300 });
-  }, [fitView, initialCaseData.id]); 
+  }, [fitView, initialCaseData.id, isFullScreen]); 
 
   const handleSaveChangesClick = () => {
     const updatedCaseData: Case = {
@@ -238,6 +247,13 @@ const WebEditorView: React.FC<WebEditorViewProps> = ({ initialCaseData, onSaveCh
           aria-label="Título do Caso"
         />
         <div className="flex items-center space-x-2">
+          <button 
+            onClick={toggleFullScreen}
+            className={`px-3 py-1.5 text-xs rounded ${activeTheme.buttonClass} flex items-center`}
+            title={isFullScreen ? "Minimizar" : "Maximizar"}
+          >
+            {isFullScreen ? <MinimizeIcon className="h-4 w-4" /> : <MaximizeIcon className="h-4 w-4" />}
+          </button>
           <button 
             onClick={handleExportPNG}
             disabled={isExporting}

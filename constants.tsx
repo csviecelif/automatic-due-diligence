@@ -18,6 +18,8 @@ import {
   InformationCircleIcon as HeroInformationCircleIcon,
   ArrowDownTrayIcon as HeroArrowDownTrayIcon, // For export
   PhotoIcon as HeroPhotoIcon, // For image upload
+  MaximizeIcon as HeroMaximizeIcon, // For fullscreen
+  MinimizeIcon as HeroMinimizeIcon, // For fullscreen
 } from './icons'; 
 
 export const DEFAULT_PHOTO_URL = 'https://ui-avatars.com/api/?name=N+A&background=random&size=80&font-size=0.33&bold=true&color=fff';
@@ -170,6 +172,8 @@ export const InformationIcon: React.FC<{className?: string}> = HeroInformationCi
 export const CloseIcon: React.FC<{className?: string}> = HeroXMarkIcon;
 export const PhotoUploadIcon: React.FC<{className?: string}> = HeroPhotoIcon;
 export const ExportIcon: React.FC<{className?: string}> = HeroArrowDownTrayIcon;
+export const MaximizeIcon: React.FC<{className?: string}> = HeroMaximizeIcon;
+export const MinimizeIcon: React.FC<{className?: string}> = HeroMinimizeIcon;
 
 export const SaveIcon: React.FC<{className?: string}> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className || "w-6 h-6"}>

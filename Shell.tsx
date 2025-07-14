@@ -19,6 +19,7 @@ const Shell: React.FC = () => {
   const [activeTheme, setActiveTheme] = useState<WebEditorTheme>(WEB_EDITOR_THEMES[0]);
   const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false);
   const [isAddRelationshipModalOpen, setIsAddRelationshipModalOpen] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   // ... (useEffect hooks remain the same) ...
   useEffect(() => {
@@ -53,6 +54,7 @@ const Shell: React.FC = () => {
 
   const handleNavigation = (viewId: ViewId) => {
     setCurrentView(viewId);
+    setIsFullScreen(false); // Exit fullscreen when navigating
   };
 
   const handleOpenCaseInEditor = useCallback((caseId: string) => {
@@ -158,37 +160,32 @@ const Shell: React.FC = () => {
     };
   }, [cases]);
 
-  const renderCurrentView = () => {
-    switch (currentView) {
-      case 'dashboard':
-        return (
-          <DashboardPage
-            cases={cases}
-            onOpenCase={handleOpenCaseInEditor}
-            onNewCase={handleCreateNewCase}
-            onDeleteCase={handleDeleteRequest}
-          />
-        );
-      case 'web-editor':
-        if (!activeCase) {
-          return <div className="p-8 text-center text-gray-600">Por favor, selecione um caso no painel para editar ou crie um novo.</div>;
-        }
-        return (
-          <ReactFlowProvider>
-            <WebEditorView
-              key={activeCase.id}
-              initialCaseData={activeCase}
-              onSaveChanges={handleUpdateCase}
-              onCloseEditor={() => setCurrentView('dashboard')}
-              activeTheme={activeTheme}
-              setActiveTheme={setActiveTheme}
-            />
-          </ReactFlowProvider>
-        );
-      default:
-        return <div className="p-8">Visualização não encontrada.</div>;
+  const renderWebEditor = () => {
+    if (!activeCase) {
+      return <div className="p-8 text-center text-gray-600">Por favor, selecione um caso no painel para editar ou crie um novo.</div>;
     }
+    return (
+      <ReactFlowProvider>
+        <WebEditorView
+          key={activeCase.id}
+          initialCaseData={activeCase}
+          onSaveChanges={handleUpdateCase}
+          onCloseEditor={() => {
+            setCurrentView('dashboard');
+            setIsFullScreen(false);
+          }}
+          activeTheme={activeTheme}
+          setActiveTheme={setActiveTheme}
+          isFullScreen={isFullScreen}
+          toggleFullScreen={() => setIsFullScreen(prev => !prev)}
+        />
+      </ReactFlowProvider>
+    );
   };
+
+  if (isFullScreen && currentView === 'web-editor') {
+    return renderWebEditor();
+  }
 
   return (
     <>
@@ -222,7 +219,16 @@ const Shell: React.FC = () => {
         onAddPerson={() => setIsAddPersonModalOpen(true)}
         onAddRelationship={() => setIsAddRelationshipModalOpen(true)}
       >
-        {renderCurrentView()}
+        {currentView === 'dashboard' ? (
+          <DashboardPage
+            cases={cases}
+            onOpenCase={handleOpenCaseInEditor}
+            onNewCase={handleCreateNewCase}
+            onDeleteCase={handleDeleteRequest}
+          />
+        ) : (
+          renderWebEditor()
+        )}
       </MainLayout>
     </>
   );
