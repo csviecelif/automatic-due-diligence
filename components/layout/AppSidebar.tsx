@@ -1,6 +1,6 @@
 import React from 'react';
-import { NavItem, ViewId, SidebarStats } from '../../types';
-import { UserIcon as DefaultUserIcon } from '../../constants'; // Placeholder for avatar
+import { NavItem, ViewId, SidebarStats, WebEditorTheme } from '../../types';
+import { UserIcon as DefaultUserIcon, AddIcon, PeopleIcon, RelationshipIcon } from '../../constants';
 
 interface AppSidebarProps {
   navItems: NavItem[];
@@ -10,6 +10,11 @@ interface AppSidebarProps {
   userName: string;
   userRole: string;
   userAvatarUrl?: string;
+  activeTheme: WebEditorTheme;
+  setActiveTheme: (theme: WebEditorTheme) => void;
+  themes: WebEditorTheme[];
+  onAddPerson: () => void;
+  onAddRelationship: () => void;
 }
 
 const AppSidebar: React.FC<AppSidebarProps> = ({ 
@@ -19,8 +24,15 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
   stats,
   userName,
   userRole,
-  userAvatarUrl
+  userAvatarUrl,
+  activeTheme,
+  setActiveTheme,
+  themes,
+  onAddPerson,
+  onAddRelationship
 }) => {
+  const isWebEditorActive = currentViewId === 'web-editor';
+
   return (
     <div className="flex flex-col w-64 bg-slate-800 text-slate-100">
       {/* Logo/App Name */}
@@ -57,7 +69,38 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
             {item.name}
           </a>
         ))}
+        {isWebEditorActive && (
+          <div className="pt-4 mt-4 border-t border-slate-700">
+            <h3 className="px-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Ações do Caso</h3>
+            <div className="space-y-1 mt-2">
+              <button onClick={onAddPerson} className="w-full flex items-center px-3 py-2.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-colors duration-150 ease-in-out">
+                <PeopleIcon className="mr-3 h-5 w-5" />
+                Adicionar Pessoa
+              </button>
+              <button onClick={onAddRelationship} className="w-full flex items-center px-3 py-2.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-colors duration-150 ease-in-out">
+                <RelationshipIcon className="mr-3 h-5 w-5" />
+                Adicionar Relacionamento
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
+
+      {/* Theme Selector */}
+      <div className="px-4 py-4 border-t border-slate-700">
+        <label htmlFor="theme-selector" className="mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Tema do Editor</label>
+        <select
+          id="theme-selector"
+          value={activeTheme.name}
+          onChange={(e) => {
+            const theme = themes.find(t => t.name === e.target.value);
+            if (theme) setActiveTheme(theme);
+          }}
+          className="w-full px-3 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 bg-slate-700 text-white border-slate-600 focus:ring-sky-500 focus:border-sky-500 text-sm"
+        >
+          {themes.map(theme => <option key={theme.name} value={theme.name}>{theme.name}</option>)}
+        </select>
+      </div>
 
       {/* Statistics */}
       <div className="px-4 py-4 border-t border-slate-700">

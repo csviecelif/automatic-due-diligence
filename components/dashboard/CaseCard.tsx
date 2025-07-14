@@ -1,15 +1,14 @@
 import React from 'react';
 import { Case } from '../../types';
-import { OpenWebIcon, ViewDetailsIcon, UserIcon, CalendarIcon, DeleteIcon } from '../../constants';
+import { OpenWebIcon, UserIcon, CalendarIcon, DeleteIcon } from '../../constants';
 
 interface CaseCardProps {
   caseData: Case;
   onOpenWeb: (caseId: string) => void;
-  onViewDetails: (caseId: string) => void;
   onDelete: (caseId: string) => void;
 }
 
-const CaseCard: React.FC<CaseCardProps> = ({ caseData, onOpenWeb, onViewDetails, onDelete }) => {
+const CaseCard: React.FC<CaseCardProps> = ({ caseData, onOpenWeb, onDelete }) => {
   const getStatusColor = (status: Case['status']) => {
     switch (status) {
       case 'Ativo': return 'bg-green-100 text-green-700 border-green-300';
@@ -78,13 +77,6 @@ const CaseCard: React.FC<CaseCardProps> = ({ caseData, onOpenWeb, onViewDetails,
         >
           <OpenWebIcon className="h-4 w-4 mr-1.5" />
           Abrir Teia
-        </button>
-        <button
-          onClick={() => onViewDetails(caseData.id)}
-          className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded-md transition-colors duration-150"
-          aria-label={`Ver detalhes do caso ${caseData.title}`}
-        >
-          <ViewDetailsIcon className="h-5 w-5" />
         </button>
         <button
           onClick={() => onDelete(caseData.id)}
