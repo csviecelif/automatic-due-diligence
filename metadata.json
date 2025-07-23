@@ -1,6 +1,0 @@
-{
-  "name": "Relationship Web Builder",
-  "description": "An automated creator of 'relationship webs' (flowcharts) for forensic investigations and due diligence. Customize person data (name, photo) and relationship types.",
-  "requestFramePermissions": [],
-  "prompt": ""
-}

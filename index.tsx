@@ -1,15 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import Shell from './Shell'; // New top-level component
+import App from './App';
+import './index.css'; // Certifique-se de que este arquivo existe e contém estilos globais
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
-}
-
-const root = ReactDOM.createRoot(rootElement);
-root.render(
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <Shell />
-  </React.StrictMode>
+    <App />
+  </React.StrictMode>,
 );

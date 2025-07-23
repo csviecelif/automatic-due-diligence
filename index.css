@@ -1,0 +1,21 @@
+/* Estilos globais básicos para o projeto */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Adicione aqui quaisquer estilos Tailwind CSS que você queira aplicar globalmente, se necessário */
+/* Por exemplo, para garantir que o HTML e o body ocupem 100% da altura */
+html, body, #root {
+  height: 100%;
+  overflow: hidden; /* Para evitar scroll desnecessário no layout principal */
+}

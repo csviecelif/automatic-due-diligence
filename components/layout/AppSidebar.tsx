@@ -1,37 +1,17 @@
 import React from 'react';
-import { NavItem, ViewId, SidebarStats, WebEditorTheme } from '../../types';
-import { UserIcon as DefaultUserIcon, AddIcon, PeopleIcon, RelationshipIcon } from '../../constants';
+import { Link } from 'react-router-dom';
+import { DocumentTextIcon, DocumentMagnifyingGlassIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { useOCR } from '../../OCRContext';
 
-interface AppSidebarProps {
-  navItems: NavItem[];
-  currentViewId: ViewId;
-  onNavigate: (viewId: ViewId) => void;
-  stats: SidebarStats;
-  userName: string;
-  userRole: string;
-  userAvatarUrl?: string;
-  activeTheme: WebEditorTheme;
-  setActiveTheme: (theme: WebEditorTheme) => void;
-  themes: WebEditorTheme[];
-  onAddPerson: () => void;
-  onAddRelationship: () => void;
-}
+const AppSidebar: React.FC = () => {
+  const { documents, selectDocument, deleteDocument } = useOCR();
 
-const AppSidebar: React.FC<AppSidebarProps> = ({ 
-  navItems, 
-  currentViewId, 
-  onNavigate, 
-  stats,
-  userName,
-  userRole,
-  userAvatarUrl,
-  activeTheme,
-  setActiveTheme,
-  themes,
-  onAddPerson,
-  onAddRelationship
-}) => {
-  const isWebEditorActive = currentViewId === 'web-editor';
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation(); // Impede que o modal seja aberto ao clicar na lixeira
+    if (window.confirm('Tem certeza de que deseja excluir este documento? Esta ação não pode ser desfeita.')) {
+      deleteDocument(id);
+    }
+  };
 
   return (
     <div className="flex flex-col w-64 bg-slate-800 text-slate-100">
@@ -47,94 +27,42 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       {/* Navigation */}
       <nav className="flex-grow px-2 py-4 space-y-1">
         <h3 className="px-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Navegação</h3>
-        {navItems.map((item) => (
-          <a
-            key={item.name}
-            href={item.href}
-            onClick={(e) => {
-              e.preventDefault();
-              if (!item.disabled) onNavigate(item.viewId);
-            }}
-            className={`
-              flex items-center px-3 py-2.5 rounded-md text-sm font-medium
-              transition-colors duration-150 ease-in-out
-              ${item.viewId === currentViewId 
-                ? 'bg-sky-500 text-white' 
-                : 'text-slate-300 hover:bg-slate-700 hover:text-white'}
-              ${item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-            `}
-            aria-current={item.viewId === currentViewId ? 'page' : undefined}
-          >
-            <item.icon className="mr-3 h-5 w-5 flex-shrink-0" aria-hidden="true" />
-            {item.name}
-          </a>
-        ))}
-        {isWebEditorActive && (
-          <div className="pt-4 mt-4 border-t border-slate-700">
-            <h3 className="px-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Ações do Caso</h3>
-            <div className="space-y-1 mt-2">
-              <button onClick={onAddPerson} className="w-full flex items-center px-3 py-2.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-colors duration-150 ease-in-out">
-                <PeopleIcon className="mr-3 h-5 w-5" />
-                Adicionar Pessoa
-              </button>
-              <button onClick={onAddRelationship} className="w-full flex items-center px-3 py-2.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-colors duration-150 ease-in-out">
-                <RelationshipIcon className="mr-3 h-5 w-5" />
-                Adicionar Relacionamento
-              </button>
-            </div>
-          </div>
-        )}
+        <Link
+          to="/"
+          className="flex items-center px-3 py-2.5 rounded-md text-sm font-medium transition-colors duration-150 ease-in-out bg-sky-500 text-white"
+          aria-current="page"
+        >
+          <DocumentTextIcon className="mr-3 h-5 w-5 flex-shrink-0" aria-hidden="true" />
+          OCR de Documentos
+        </Link>
       </nav>
 
-      {/* Theme Selector */}
-      <div className="px-4 py-4 border-t border-slate-700">
-        <label htmlFor="theme-selector" className="mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Tema do Editor</label>
-        <select
-          id="theme-selector"
-          value={activeTheme.name}
-          onChange={(e) => {
-            const theme = themes.find(t => t.name === e.target.value);
-            if (theme) setActiveTheme(theme);
-          }}
-          className="w-full px-3 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 bg-slate-700 text-white border-slate-600 focus:ring-sky-500 focus:border-sky-500 text-sm"
-        >
-          {themes.map(theme => <option key={theme.name} value={theme.name}>{theme.name}</option>)}
-        </select>
-      </div>
-
-      {/* Statistics */}
-      <div className="px-4 py-4 border-t border-slate-700">
-        <h3 className="mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Estatísticas</h3>
-        <ul className="space-y-1 text-sm">
-          <li className="flex justify-between text-slate-300">
-            <span>Casos Ativos:</span>
-            <span className="font-medium">{stats.activeCases}</span>
-          </li>
-          <li className="flex justify-between text-slate-300">
-            <span>Total Pessoas:</span>
-            <span className="font-medium">{stats.totalPeople}</span>
-          </li>
-          <li className="flex justify-between text-slate-300">
-            <span>Relacionamentos:</span>
-            <span className="font-medium">{stats.totalRelationships}</span>
-          </li>
-        </ul>
-      </div>
-
-      {/* User Profile */}
-      <div className="px-4 py-4 border-t border-slate-700">
-        <div className="flex items-center space-x-3">
-          {userAvatarUrl ? (
-            <img className="h-10 w-10 rounded-full object-cover" src={userAvatarUrl} alt={userName} />
+      {/* Lista de Documentos OCR */}
+      <div className="flex-grow px-2 py-4 space-y-1 border-t border-slate-700">
+        <h3 className="px-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Documentos Extraídos</h3>
+        <div className="max-h-60 overflow-y-auto">
+          {documents.length > 0 ? (
+            documents.map(doc => (
+              <div key={doc.id} className="flex items-center justify-between rounded-md hover:bg-slate-700 group">
+                <button
+                  onClick={() => selectDocument(doc)}
+                  className="flex-grow flex items-center px-3 py-2.5 text-sm text-left font-medium transition-colors duration-150 ease-in-out text-slate-300 group-hover:text-white"
+                >
+                  <DocumentMagnifyingGlassIcon className="mr-3 h-5 w-5 flex-shrink-0" aria-hidden="true" />
+                  <span className="truncate">{doc.title}</span>
+                </button>
+                <button
+                  onClick={(e) => handleDelete(e, doc.id)}
+                  className="p-2 text-slate-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Excluir documento"
+                >
+                  <TrashIcon className="h-5 w-5" />
+                </button>
+              </div>
+            ))
           ) : (
-            <span className="h-10 w-10 rounded-full bg-slate-600 flex items-center justify-center text-slate-300">
-              <DefaultUserIcon className="h-6 w-6" />
-            </span>
+            <p className="px-3 py-2 text-sm text-slate-500">Nenhum documento processado.</p>
           )}
-          <div>
-            <p className="text-sm font-medium text-white">{userName}</p>
-            <p className="text-xs text-slate-400">{userRole}</p>
-          </div>
         </div>
       </div>
     </div>
