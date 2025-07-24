@@ -123,30 +123,32 @@ const ReportPage: React.FC = () => {
     pptx.defineLayout({ name: 'LAYOUT_CUSTOM_16X9', width: 16, height: 9 });
     pptx.layout = 'LAYOUT_CUSTOM_16X9';
 
+    // Fator de conversão de Pixel para Polegada, baseado no tamanho do slide
+    const PIXELS_PER_INCH = 1152 / 16; // 72 DPI, mas baseado na largura do canvas
+
     for (const slideData of finalSlides) {
       const slide = pptx.addSlide();
       if (slideData.background) {
         slide.background = { color: slideData.background.replace('#', '') };
       }
       
-      // Carrega temporariamente o slide no canvas para obter objetos reais
-      await new Promise<void>(resolve => canvas.loadFromJSON(slideData, () => resolve()));
-      const objects = canvas.getObjects();
+      const tempCanvas = new fabric.Canvas(null); // Canvas temporário para obter objetos reais
+      await new Promise<void>(resolve => tempCanvas.loadFromJSON(slideData, () => resolve()));
+      const objects = tempCanvas.getObjects();
 
       objects.forEach((obj: fabric.Object) => {
-        const inch = (px: number, total: number) => (px / total) * (total === 1152 ? 16 : 9);
         const commonOptions = {
-          x: inch(obj.left!, 1152),
-          y: inch(obj.top!, 648),
-          w: inch(obj.getScaledWidth(), 1152),
-          h: inch(obj.getScaledHeight(), 648),
+          x: obj.left! / PIXELS_PER_INCH,
+          y: obj.top! / PIXELS_PER_INCH,
+          w: obj.getScaledWidth() / PIXELS_PER_INCH,
+          h: obj.getScaledHeight() / PIXELS_PER_INCH,
         };
 
         if (obj.type === 'textbox') {
           const textbox = obj as fabric.Textbox;
           slide.addText(textbox.text!, {
             ...commonOptions,
-            fontSize: (textbox.fontSize || 12) * 0.75,
+            fontSize: (textbox.fontSize || 12) * (72 / 96), // Conversão correta de Pixel para Ponto
             fontFace: textbox.fontFamily,
             color: (textbox.fill || '000000').toString().replace('#', ''),
             bold: textbox.fontWeight === 'bold' || textbox.fontWeight === 600,
@@ -162,11 +164,9 @@ const ReportPage: React.FC = () => {
           });
         }
       });
+      tempCanvas.dispose();
     }
     
-    // Restaura o slide ativo no canvas
-    canvas.loadFromJSON(finalSlides[activeSlide], () => canvas.renderAll());
-
     pptx.writeFile({ fileName: "Relatorio_Final.pptx" });
   };
 
