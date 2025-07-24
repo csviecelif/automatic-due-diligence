@@ -2,69 +2,38 @@ import React, { useRef, useEffect, useState } from 'react';
 import * as fabric from 'fabric';
 import pptxgen from "pptxgenjs";
 
-// --- DEFINIÇÃO DO TEMPLATE DE ALTA FIDELIDADE ---
-
-// Fatores de conversão baseados no tamanho do slide (40.64cm) e do canvas (1152px)
-const cmToPx = (cm: number) => (cm / 40.64) * 1152;
-const ptToPx = (pt: number) => pt * (96 / 72); // Conversão de pontos (fonte) para pixels
-
+// --- DEFINIÇÃO DO TEMPLATE ---
 const slideTemplates = [
-  // Slide 1: Capa (Alta Fidelidade com Conversão Precisa)
+  // Slide 1: Capa (Valores iniciais para calibração)
   {
     "version": "5.3.0", "objects": [
-      // Título Principal
-      { "type": "textbox", "left": cmToPx(0), "top": cmToPx(5), "width": cmToPx(40.5), "height": cmToPx(3), "fontSize": ptToPx(60), "fontFamily": "Crimson Pro", "fontWeight": 600, "fill": "#152D47", "text": "Relatório de Due Diligence", "textAlign": "center" },
-      // Nome da Pessoa (Placeholder)
-      { "type": "textbox", "left": cmToPx(13.1), "top": cmToPx(8.65), "width": cmToPx(14.55), "height": cmToPx(1.35), "fontSize": ptToPx(28), "fontFamily": "Arial", "fontWeight": "bold", "fill": "#6E6E6E", "text": "[NOME DA PESSOA]", "textAlign": "center" },
-      // Linha Horizontal
-      { "type": "rect", "left": cmToPx(2), "top": cmToPx(13.5), "height": 2, "width": cmToPx(37), "fill": "#6E6E6E", "selectable": false, "hoverCursor": "default" },
-      // Texto Descritivo
-      { "type": "textbox", "left": cmToPx(2.5), "top": cmToPx(14), "width": cmToPx(36.5), "height": cmToPx(1.82), "fontSize": ptToPx(20), "fontFamily": "Arial", "fill": "#6E6E6E", "textAlign": "justify", "text": "Análise consolidada de informações cadastrais, patrimoniais e do histórico processual para identificação de riscos, inconsistências e subsídios para a estratégia jurídica." }
+      { "type": "textbox", "left": 50, "top": 150, "width": 1000, "fontSize": 75, "fontFamily": "Crimson Pro", "fontWeight": 600, "fill": "#152D47", "text": "Relatório de Due Diligence", "textAlign": "left" },
+      { "type": "textbox", "left": 490, "top": 335, "width": 400, "fontSize": 32, "fontFamily": "Arial", "fontWeight": "bold", "fill": "#6E6E6E", "text": "[NOME DA PESSOA]", "textAlign": "center" },
+      { "type": "rect", "left": 75, "top": 500, "height": 2, "width": 1000, "fill": "#6E6E6E" },
+      { "type": "textbox", "left": 75, "top": 520, "width": 1000, "fontSize": 22, "fontFamily": "Arial", "fill": "#6E6E6E", "textAlign": "justify", "text": "Análise consolidada de informações cadastrais, patrimoniais e do histórico processual para identificação de riscos, inconsistências e subsídios para a estratégia jurídica." }
     ], "background": "#FFFFFF"
   },
-  // Slides 2 a 6 mantêm o design anterior por enquanto
-  { "version": "5.3.0", "objects": [
-      { "type": "textbox", "left": 50, "top": 40, "width": 700, "fontSize": 32, "fontWeight": "bold", "fill": "#0A2D4D", "text": "ÍNDICE" },
-      { "type": "rect", "left": 50, "top": 85, "height": 3, "width": 700, "fill": "#0077B6", "selectable": false, "hoverCursor": "default" },
-      ...["OBJETO DA INVESTIGAÇÃO", "FONTES DE PESQUISA", "INFORMAÇÕES CADASTRAIS", "SÓCIOS E PARTICIPAÇÕES", "PROCESSOS JUDICIAIS E EXTRAJUDICIAIS", "MÍDIA E REPUTAÇÃO", "CONCLUSÃO"].map((item, index) => (
-        { "type": "textbox", "left": 70, "top": 120 + (index * 40), "width": 650, "fontSize": 18, "fill": "#333333", "text": `${index + 1}. ${item}` }
-      ))
-    ], "background": "#F8F9FA"
-  },
-  { "version": "5.3.0", "objects": [
-      { "type": "textbox", "left": 50, "top": 40, "width": 700, "fontSize": 28, "fontWeight": "bold", "fill": "#0A2D4D", "text": "1. OBJETO DA INVESTIGAÇÃO" },
-      { "type": "rect", "left": 50, "top": 85, "height": 3, "width": 700, "fill": "#0077B6", "selectable": false, "hoverCursor": "default" },
-      { "type": "textbox", "left": 50, "top": 130, "width": 700, "fontSize": 16, "textAlign": "justify", "fill": "#333333", "text": "O presente relatório tem por objeto a realização de Due Diligence sobre a sociedade [NOME DA SOCIEDADE], com o objetivo de identificar e analisar informações relevantes para a tomada de decisão, abrangendo aspectos societários, fiscais, judiciais e reputacionais." }
-    ], "background": "#F8F9FA"
-  },
-  { "version": "5.3.0", "objects": [
-      { "type": "textbox", "left": 50, "top": 40, "width": 700, "fontSize": 28, "fontWeight": "bold", "fill": "#0A2D4D", "text": "2. FONTES DE PESQUISA" },
-      { "type": "rect", "left": 50, "top": 85, "height": 3, "width": 700, "fill": "#0077B6", "selectable": false, "hoverCursor": "default" },
-      ...["Receita Federal do Brasil (RFB)", "Sintegra (ICMS)", "Juntas Comerciais", "Tribunais de Justiça (Estaduais e Federais)", "Diários Oficiais (DOU, DOE)", "Bureaus de crédito e risco", "Mídia nacional e internacional"].flatMap((item, index) => ([
-        { "type": "rect", "height": 8, "width": 8, "fill": "#0A2D4D", "left": 50, "top": 135 + (index * 35), "selectable": false, "hoverCursor": "default" },
-        { "type": "textbox", "left": 75, "top": 130 + (index * 35), "width": 650, "fontSize": 16, "fill": "#333333", "text": item }
-      ]))
-    ], "background": "#F8F9FA"
-  },
-  { "version": "5.3.0", "objects": [
-      { "type": "textbox", "left": 50, "top": 40, "width": 700, "fontSize": 28, "fontWeight": "bold", "fill": "#0A2D4D", "text": "3. INFORMAÇÕES CADASTRAIS" },
-      { "type": "rect", "left": 50, "top": 85, "height": 3, "width": 700, "fill": "#0077B6", "selectable": false, "hoverCursor": "default" },
-      ...[
-        { label: "RAZÃO SOCIAL", value: "[VALOR]" }, { label: "NOME FANTASIA", value: "[VALOR]" }, { label: "CNPJ", value: "[VALOR]" }, { label: "DATA DE ABERTURA", value: "[VALOR]" },
-        { label: "ENDEREÇO", value: "[VALOR]" }, { label: "CAPITAL SOCIAL", value: "[VALOR]" }, { label: "ATIVIDADE PRINCIPAL (CNAE)", value: "[VALOR]" }, { label: "SITUAÇÃO CADASTRAL", value: "[VALOR]" },
-      ].flatMap((item, index) => ([
-        { "type": "textbox", "left": 50, "top": 130 + (index * 35), "width": 300, "fontSize": 15, "fontWeight": "bold", "fill": "#333333", "text": item.label },
-        { "type": "textbox", "left": 370, "top": 130 + (index * 35), "width": 400, "fontSize": 15, "fill": "#333333", "text": item.value }
-      ]))
-    ], "background": "#F8F9FA"
-  },
-  { "version": "5.3.0", "objects": [
-      { "type": "textbox", "left": 50, "top": 40, "width": 700, "fontSize": 28, "fontWeight": "bold", "fill": "#0A2D4D", "text": "7. CONCLUSÃO" },
-      { "type": "rect", "left": 50, "top": 85, "height": 3, "width": 700, "fill": "#0077B6", "selectable": false, "hoverCursor": "default" },
-      { "type": "textbox", "left": 50, "top": 130, "width": 700, "fontSize": 16, "textAlign": "justify", "fill": "#333333", "text": "A partir da análise das informações coletadas, conclui-se que [APRESENTAR A CONCLUSÃO DA ANÁLISE]. Recomenda-se [APRESENTAR RECOMENDAÇÕES]." }
-    ], "background": "#F8F9FA"
-  }
+  { "version": "5.3.0", "objects": [ { "type": "textbox", "text": "Slide 2" } ], "background": "#F0F0F0" },
+  { "version": "5.3.0", "objects": [ { "type": "textbox", "text": "Slide 3" } ], "background": "#F0F0F0" },
 ];
+
+// --- COMPONENTE DA FERRAMENTA DE CALIBRAÇÃO ---
+const CalibrationTool = ({ activeObjectProps, onPropChange }: { activeObjectProps: any, onPropChange: (prop: string, value: string) => void }) => {
+  if (Object.keys(activeObjectProps).length === 0) return null;
+
+  return (
+    <div className="bg-gray-800 text-white p-4 rounded-lg mt-4">
+      <h3 className="text-lg font-bold mb-2">Ferramenta de Calibração</h3>
+      <div className="grid grid-cols-3 gap-4">
+        <div><label>Left (x):</label><input type="number" value={activeObjectProps.left} onChange={e => onPropChange('left', e.target.value)} className="w-full bg-gray-700 p-1 rounded" /></div>
+        <div><label>Top (y):</label><input type="number" value={activeObjectProps.top} onChange={e => onPropChange('top', e.target.value)} className="w-full bg-gray-700 p-1 rounded" /></div>
+        <div><label>Width:</label><input type="number" value={activeObjectProps.width} onChange={e => onPropChange('width', e.target.value)} className="w-full bg-gray-700 p-1 rounded" /></div>
+        <div><label>Height:</label><input type="number" value={activeObjectProps.height} onChange={e => onPropChange('height', e.target.value)} className="w-full bg-gray-700 p-1 rounded" /></div>
+        {activeObjectProps.fontSize && <div><label>Font Size:</label><input type="number" value={activeObjectProps.fontSize} onChange={e => onPropChange('fontSize', e.target.value)} className="w-full bg-gray-700 p-1 rounded" /></div>}
+      </div>
+    </div>
+  );
+};
 
 const ReportPage: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -72,31 +41,66 @@ const ReportPage: React.FC = () => {
   
   const [slides, setSlides] = useState<any[]>(() => JSON.parse(JSON.stringify(slideTemplates)));
   const [activeSlide, setActiveSlide] = useState(0);
+  const [isCalibrating, setIsCalibrating] = useState(false);
+  const [activeObjectProps, setActiveObjectProps] = useState<any>({});
+
+  const updateActiveObjectProps = (obj: fabric.Object | null) => {
+    if (obj) {
+      const props: any = {
+        left: obj.left?.toFixed(0) || 0,
+        top: obj.top?.toFixed(0) || 0,
+        width: obj.getScaledWidth().toFixed(0),
+        height: obj.getScaledHeight().toFixed(0),
+      };
+      if ((obj as fabric.Textbox).fontSize) {
+        props.fontSize = (obj as fabric.Textbox).fontSize?.toFixed(0) || 0;
+      }
+      setActiveObjectProps(props);
+    } else {
+      setActiveObjectProps({});
+    }
+  };
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    const canvas = new fabric.Canvas(canvasRef.current, {
-      width: 1152, // Proporção 16:9 (baseado em 40.64cm)
-      height: 648, // Proporção 16:9 (baseado em 22.86cm)
-      allowTouchScrolling: true,
-    });
+    const canvas = new fabric.Canvas(canvasRef.current, { width: 1152, height: 648, allowTouchScrolling: true });
     fabricCanvasRef.current = canvas;
-    return () => {
-      fabricCanvasRef.current?.dispose();
-      fabricCanvasRef.current = null;
-    };
+
+    const onObjectSelected = (e: fabric.IEvent) => updateActiveObjectProps(e.target || null);
+    const onObjectModified = (e: fabric.IEvent) => updateActiveObjectProps(e.target || null);
+
+    canvas.on('selection:created', onObjectSelected);
+    canvas.on('selection:updated', onObjectSelected);
+    canvas.on('selection:cleared', () => updateActiveObjectProps(null));
+    canvas.on('object:modified', onObjectModified);
+
+    return () => { canvas.dispose(); };
   }, []);
 
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
     if (canvas) {
       canvas.loadFromJSON(slides[activeSlide], () => {
-        requestAnimationFrame(() => {
-            canvas.renderAll();
-        });
+        canvas.renderAll();
+        updateActiveObjectProps(null);
       });
     }
-  }, [activeSlide, slides]);
+  }, [activeSlide]);
+
+  const handlePropChange = (prop: string, value: string) => {
+    const canvas = fabricCanvasRef.current;
+    const obj = canvas?.getActiveObject();
+    if (obj) {
+      const numericValue = parseFloat(value);
+      if (!isNaN(numericValue)) {
+        obj.set(prop as any, numericValue);
+        if (prop === 'width') obj.scaleX = numericValue / obj.width!;
+        if (prop === 'height') obj.scaleY = numericValue / obj.height!;
+        canvas?.requestRenderAll();
+        updateActiveObjectProps(obj);
+      }
+    }
+  };
 
   const changeSlide = (newSlideIndex: number) => {
     const canvas = fabricCanvasRef.current;
@@ -108,61 +112,72 @@ const ReportPage: React.FC = () => {
     setActiveSlide(newSlideIndex);
   };
 
-  const exportReport = () => {
+  const exportReport = async () => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
+
     const finalSlides = [...slides];
     finalSlides[activeSlide] = canvas.toDatalessJSON();
-    const pptx = new pptxgen();
-    
-    // Definindo o tamanho do slide no pptx para corresponder ao original
-    pptx.layout = { name: 'LAYOUT_WIDE', width: 16, height: 9 };
 
-    finalSlides.forEach(slideData => {
+    const pptx = new pptxgen();
+    pptx.defineLayout({ name: 'LAYOUT_CUSTOM_16X9', width: 16, height: 9 });
+    pptx.layout = 'LAYOUT_CUSTOM_16X9';
+
+    for (const slideData of finalSlides) {
       const slide = pptx.addSlide();
       if (slideData.background) {
         slide.background = { color: slideData.background.replace('#', '') };
       }
+      
+      // Carrega temporariamente o slide no canvas para obter objetos reais
+      await new Promise<void>(resolve => canvas.loadFromJSON(slideData, () => resolve()));
+      const objects = canvas.getObjects();
 
-      slideData.objects.forEach((obj: any) => {
-        // Conversão de pixels do canvas para polegadas do pptx
+      objects.forEach((obj: fabric.Object) => {
         const inch = (px: number, total: number) => (px / total) * (total === 1152 ? 16 : 9);
-
         const commonOptions = {
-          x: inch(obj.left, 1152),
-          y: inch(obj.top, 648),
-          w: inch(obj.width * (obj.scaleX || 1), 1152),
-          h: inch(obj.height * (obj.scaleY || 1), 648),
+          x: inch(obj.left!, 1152),
+          y: inch(obj.top!, 648),
+          w: inch(obj.getScaledWidth(), 1152),
+          h: inch(obj.getScaledHeight(), 648),
         };
 
         if (obj.type === 'textbox') {
-          slide.addText(obj.text, {
+          const textbox = obj as fabric.Textbox;
+          slide.addText(textbox.text!, {
             ...commonOptions,
-            fontSize: obj.fontSize, // Usando o tamanho em pt diretamente
-            fontFace: obj.fontFamily,
-            color: (obj.fill || '000000').replace('#', ''),
-            bold: obj.fontWeight === 'bold' || obj.fontWeight === 600,
-            italic: obj.fontStyle === 'italic',
-            underline: obj.underline,
-            align: obj.textAlign?.toLowerCase() as any || 'left',
+            fontSize: (textbox.fontSize || 12) * 0.75,
+            fontFace: textbox.fontFamily,
+            color: (textbox.fill || '000000').toString().replace('#', ''),
+            bold: textbox.fontWeight === 'bold' || textbox.fontWeight === 600,
+            italic: textbox.fontStyle === 'italic',
+            underline: textbox.underline,
+            align: textbox.textAlign?.toLowerCase() as any || 'left',
           });
-        } else if (obj.type === 'rect' || obj.type === 'circle') {
-          slide.addShape(obj.type === 'rect' ? pptx.shapes.RECTANGLE : pptx.shapes.OVAL, {
+        } else if (obj.type === 'rect') {
+          slide.addShape(pptx.shapes.RECTANGLE, {
             ...commonOptions,
-            fill: { color: (obj.fill || '000000').replace('#', '') },
-            line: { color: (obj.fill || '000000').replace('#', ''), width: 0 },
+            fill: { color: (obj.fill || '000000').toString().replace('#', '') },
+            line: { width: 0 },
           });
         }
       });
-    });
+    }
+    
+    // Restaura o slide ativo no canvas
+    canvas.loadFromJSON(finalSlides[activeSlide], () => canvas.renderAll());
+
     pptx.writeFile({ fileName: "Relatorio_Final.pptx" });
   };
 
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6 pb-4 border-b">
-        <h1 className="text-3xl font-bold text-gray-800">Editor de Relatório Interativo</h1>
+        <h1 className="text-3xl font-bold text-gray-800">Editor de Relatório</h1>
         <div className="flex items-center space-x-4">
+          <button onClick={() => setIsCalibrating(!isCalibrating)} className={`px-4 py-2 rounded-lg ${isCalibrating ? 'bg-green-500 text-white' : 'bg-gray-300'}`}>
+            Modo de Calibração
+          </button>
           <div className="flex items-center space-x-2">
             <button onClick={() => changeSlide(activeSlide - 1)} disabled={activeSlide === 0} className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50">Anterior</button>
             <span className="font-semibold">{`Slide ${activeSlide + 1} de ${slides.length}`}</span>
@@ -173,12 +188,16 @@ const ReportPage: React.FC = () => {
           </button>
         </div>
       </div>
+
       <div className="w-full flex justify-center bg-gray-200 p-4 shadow-inner">
         <canvas ref={canvasRef} style={{ border: '1px solid #ccc' }} />
       </div>
-       <p className="text-center text-gray-500 mt-4">
-          Clique nos textos para editar. Arraste para mover. Use as alças para redimensionar.
-        </p>
+      
+      {isCalibrating && <CalibrationTool activeObjectProps={activeObjectProps} onPropChange={handlePropChange} />}
+
+      <p className="text-center text-gray-500 mt-4">
+          {isCalibrating ? "Use o painel para ajustar o objeto selecionado ou arraste/redimensione com o mouse." : "Clique nos textos para editar."}
+      </p>
     </div>
   );
 };
