@@ -1,184 +1,175 @@
-import React, { useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import * as fabric from 'fabric';
 import pptxgen from "pptxgenjs";
 
-// Estrutura de dados completa para todos os slides
-interface ReportData {
-  title: string;
-  subtitle: string;
-  clientName: string;
-  date: string;
-  tocTitle: string;
-  tocItems: string[];
-  objectivesTitle: string;
-  objectivesBody: string;
-  sourcesTitle: string;
-  sourcesItems: string[];
-  infoTitle: string;
-  infoData: { label: string; value: string }[];
-  conclusionTitle: string;
-  conclusionBody: string;
-}
-
-const ReportPage: React.FC = () => {
-  // Estado inicial com dados de todos os slides
-  const [reportData, setReportData] = useState<ReportData>({
-    title: "RELATÓRIO DE DUE DILIGENCE",
-    subtitle: "SOCIEDADE INVESTIGADA",
-    clientName: "[NOME DA SOCIEDADE]",
-    date: new Date().toLocaleDateString('pt-BR'),
-    tocTitle: "ÍNDICE",
-    tocItems: ["OBJETO DA INVESTIGAÇÃO", "FONTES DE PESQUISA", "INFORMAÇÕES CADASTRAIS", "SÓCIOS E PARTICIPAÇÕES", "PROCESSOS JUDICIAIS E EXTRAJUDICIAIS", "MÍDIA E REPUTAÇÃO", "CONCLUSÃO"],
-    objectivesTitle: "1. OBJETO DA INVESTIGAÇÃO",
-    objectivesBody: "O presente relatório tem por objeto a realização de Due Diligence sobre a sociedade [NOME DA SOCIEDADE], com o objetivo de identificar e analisar informações relevantes para a tomada de decisão.",
-    sourcesTitle: "2. FONTES DE PESQUISA",
-    sourcesItems: ["Receita Federal do Brasil (RFB)", "Sintegra", "Juntas Comerciais", "Tribunais de Justiça", "Diários Oficiais", "Bureaus de crédito", "Mídia nacional e internacional"],
-    infoTitle: "3. INFORMAÇÕES CADASTRAIS",
-    infoData: [
+// --- DEFINIÇÃO DO TEMPLATE COMO OBJETOS JSON ---
+const slideTemplates = [
+  // Slide 1: Capa
+  { "version": "5.3.0", "objects": [
+      { "type": "rect", "left": 0, "top": 0, "height": 450, "width": 100, "fill": "#003366", "selectable": false, "hoverCursor": "default" },
+      { "type": "textbox", "left": 120, "top": 150, "width": 650, "fontSize": 32, "fontWeight": "bold", "textAlign": "left", "text": "RELATÓRIO DE DUE DILIGENCE" },
+      { "type": "textbox", "left": 120, "top": 220, "width": 650, "fontSize": 20, "textAlign": "left", "text": "SOCIEDADE INVESTIGADA" },
+      { "type": "textbox", "left": 120, "top": 260, "width": 650, "fontSize": 18, "fill": "#0077b6", "textAlign": "left", "text": "[NOME DA SOCIEDADE]" }
+    ], "background": "#ffffff"
+  },
+  // Slide 2: Índice
+  { "version": "5.3.0", "objects": [
+      { "type": "textbox", "left": 400, "top": 50, "originX": "center", "width": 700, "fontSize": 28, "fontWeight": "bold", "textAlign": "center", "text": "ÍNDICE" },
+      ...["OBJETO DA INVESTIGAÇÃO", "FONTES DE PESQUISA", "INFORMAÇÕES CADASTRAIS", "SÓCIOS E PARTICIPAÇÕES", "PROCESSOS JUDICIAIS E EXTRAJUDICIAIS", "MÍDIA E REPUTAÇÃO", "CONCLUSÃO"].map((item, index) => (
+        { "type": "textbox", "left": 100, "top": 120 + (index * 40), "width": 600, "fontSize": 18, "text": `${index + 1}. ${item}` }
+      ))
+    ], "background": "#ffffff"
+  },
+  // Slide 3: Objeto da Investigação
+  { "version": "5.3.0", "objects": [
+      { "type": "textbox", "left": 50, "top": 50, "width": 700, "fontSize": 24, "fontWeight": "bold", "text": "1. OBJETO DA INVESTIGAÇÃO" },
+      { "type": "textbox", "left": 50, "top": 120, "width": 700, "fontSize": 16, "textAlign": "justify", "text": "O presente relatório tem por objeto a realização de Due Diligence sobre a sociedade [NOME DA SOCIEDADE], com o objetivo de identificar e analisar informações relevantes para a tomada de decisão." }
+    ], "background": "#ffffff"
+  },
+  // Slide 4: Fontes de Pesquisa
+  { "version": "5.3.0", "objects": [
+      { "type": "textbox", "left": 50, "top": 50, "width": 700, "fontSize": 24, "fontWeight": "bold", "text": "2. FONTES DE PESQUISA" },
+      ...["Receita Federal do Brasil (RFB)", "Sintegra", "Juntas Comerciais", "Tribunais de Justiça", "Diários Oficiais", "Bureaus de crédito", "Mídia nacional e internacional"].flatMap((item, index) => ([
+        { "type": "circle", "radius": 3, "fill": "#003366", "left": 50, "top": 125 + (index * 35), "selectable": false, "hoverCursor": "default" },
+        { "type": "textbox", "left": 70, "top": 120 + (index * 35), "width": 600, "fontSize": 16, "text": item }
+      ]))
+    ], "background": "#ffffff"
+  },
+  // Slide 5: Informações Cadastrais
+  { "version": "5.3.0", "objects": [
+      { "type": "textbox", "left": 50, "top": 50, "width": 700, "fontSize": 24, "fontWeight": "bold", "text": "3. INFORMAÇÕES CADASTRAIS" },
+      ...[
         { label: "RAZÃO SOCIAL", value: "[VALOR]" }, { label: "NOME FANTASIA", value: "[VALOR]" }, { label: "CNPJ", value: "[VALOR]" }, { label: "DATA DE ABERTURA", value: "[VALOR]" },
         { label: "ENDEREÇO", value: "[VALOR]" }, { label: "CAPITAL SOCIAL", value: "[VALOR]" }, { label: "ATIVIDADE PRINCIPAL (CNAE)", value: "[VALOR]" }, { label: "SITUAÇÃO CADASTRAL", value: "[VALOR]" },
-    ],
-    conclusionTitle: "7. CONCLUSÃO",
-    conclusionBody: "A partir da análise das informações coletadas, conclui-se que [APRESENTAR A CONCLUSÃO DA ANÁLISE]. Recomenda-se [APRESENTAR RECOMENDAÇÕES].",
-  });
+      ].flatMap((item, index) => ([
+        { "type": "textbox", "left": 50, "top": 120 + (index * 35), "width": 300, "fontSize": 14, "fontWeight": "bold", "text": item.label },
+        { "type": "textbox", "left": 350, "top": 120 + (index * 35), "width": 400, "fontSize": 14, "text": item.value }
+      ]))
+    ], "background": "#ffffff"
+  },
+  // Slide 6: Conclusão
+  { "version": "5.3.0", "objects": [
+      { "type": "textbox", "left": 50, "top": 50, "width": 700, "fontSize": 24, "fontWeight": "bold", "text": "7. CONCLUSÃO" },
+      { "type": "textbox", "left": 50, "top": 120, "width": 700, "fontSize": 16, "textAlign": "justify", "text": "A partir da análise das informações coletadas, conclui-se que [APRESENTAR A CONCLUSÃO DA ANÁLISE]. Recomenda-se [APRESENTAR RECOMENDAÇÕES]." }
+    ], "background": "#ffffff"
+  }
+];
 
-  // Handlers para atualizar o estado
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setReportData(p => ({ ...p, [name]: value }));
+const ReportPage: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
+  
+  const [slides, setSlides] = useState<any[]>(() => JSON.parse(JSON.stringify(slideTemplates)));
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  // Efeito para INICIALIZAR e DESTRUIR o canvas. Roda apenas uma vez.
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    const canvas = new fabric.Canvas(canvasRef.current, {
+      width: 800,
+      height: 450,
+      allowTouchScrolling: true, // Resolve o aviso de performance
+    });
+    fabricCanvasRef.current = canvas;
+
+    return () => {
+      fabricCanvasRef.current?.dispose();
+      fabricCanvasRef.current = null;
+    };
+  }, []);
+
+  // Efeito para CARREGAR DADOS no canvas quando o slide ativo muda.
+  useEffect(() => {
+    const canvas = fabricCanvasRef.current;
+    if (canvas) {
+      canvas.loadFromJSON(slides[activeSlide], () => {
+        canvas.renderAll();
+      });
+    }
+  }, [activeSlide, slides]);
+
+  const changeSlide = (newSlideIndex: number) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || newSlideIndex < 0 || newSlideIndex >= slides.length) return;
+
+    const currentJson = canvas.toDatalessJSON();
+    const updatedSlides = [...slides];
+    updatedSlides[activeSlide] = currentJson;
+    
+    setSlides(updatedSlides);
+    setActiveSlide(newSlideIndex);
   };
 
-  const handleTocItemChange = (index: number, value: string) => {
-    const items = [...reportData.tocItems];
-    items[index] = value;
-    setReportData(p => ({ ...p, tocItems: items }));
-  };
-
-  const handleSourceItemChange = (index: number, value: string) => {
-    const items = [...reportData.sourcesItems];
-    items[index] = value;
-    setReportData(p => ({ ...p, sourcesItems: items }));
-  };
-
-  const handleInfoDataChange = (index: number, value: string) => {
-    const items = [...reportData.infoData];
-    items[index].value = value;
-    setReportData(p => ({ ...p, infoData: items }));
-  };
-
-  // Função de exportação completa
   const exportReport = () => {
-    let pptx = new pptxgen();
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
 
-    // Slide 1: Capa
-    let slide1 = pptx.addSlide();
-    slide1.background = { color: "F1F1F1" };
-    slide1.addText(reportData.title, { x: 0.5, y: 2.5, w: 9, h: 1, align: 'center', fontSize: 32, bold: true, color: "363636" });
-    slide1.addText(reportData.subtitle, { x: 0.5, y: 3.5, w: 9, h: 0.5, align: 'center', fontSize: 20, color: "363636" });
-    slide1.addText(reportData.clientName, { x: 0.5, y: 4.0, w: 9, h: 0.5, align: 'center', fontSize: 18, color: "0077B6" });
-    slide1.addText(reportData.date, { x: 8, y: 7, w: 1.5, h: 0.25, align: 'right', fontSize: 12, color: "363636" });
+    const finalSlides = [...slides];
+    finalSlides[activeSlide] = canvas.toDatalessJSON();
 
-    // Slide 2: Índice
-    let slide2 = pptx.addSlide();
-    slide2.background = { color: "F1F1F1" };
-    slide2.addText(reportData.tocTitle, { x: 0.5, y: 0.5, w: 9, h: 0.75, align: 'center', fontSize: 28, bold: true, color: "363636" });
-    reportData.tocItems.forEach((item, index) => {
-      slide2.addText(`${index + 1}. ${item}`, { x: 1, y: 1.5 + (index * 0.6), w: 8, h: 0.5, fontSize: 18, color: "363636" });
+    const pptx = new pptxgen();
+    const inch = (px: number) => (px || 0) / 96;
+    const pt = (px: number) => (px || 0) * 0.75;
+
+    finalSlides.forEach(slideData => {
+      const slide = pptx.addSlide();
+      if (slideData.background) {
+        slide.background = { color: slideData.background.replace('#', '') };
+      }
+
+      slideData.objects.forEach((obj: any) => {
+        const commonOptions = {
+          x: inch(obj.left),
+          y: inch(obj.top),
+          w: inch(obj.width * (obj.scaleX || 1)),
+          h: inch(obj.height * (obj.scaleY || 1)),
+        };
+
+        if (obj.type === 'textbox') {
+          slide.addText(obj.text, {
+            ...commonOptions,
+            fontSize: pt(obj.fontSize * (obj.scaleY || 1)),
+            color: (obj.fill || '000000').replace('#', ''),
+            bold: obj.fontWeight === 'bold',
+            italic: obj.fontStyle === 'italic',
+            underline: obj.underline,
+            align: obj.textAlign?.toLowerCase() as any || 'left',
+          });
+        } else if (obj.type === 'rect' || obj.type === 'circle') {
+          slide.addShape(obj.type === 'rect' ? pptx.shapes.RECTANGLE : pptx.shapes.OVAL, {
+            ...commonOptions,
+            fill: { color: (obj.fill || '000000').replace('#', '') },
+          });
+        }
+      });
     });
 
-    // Slide 3: Objeto da Investigação
-    let slide3 = pptx.addSlide();
-    slide3.background = { color: "F1F1F1" };
-    slide3.addText(reportData.objectivesTitle, { x: 0.5, y: 0.5, w: 9, h: 0.75, fontSize: 24, bold: true, color: "363636" });
-    slide3.addText(reportData.objectivesBody, { x: 0.5, y: 1.5, w: 9, h: 4, fontSize: 16, color: "363636", align: 'justify' });
-
-    // Slide 4: Fontes de Pesquisa
-    let slide4 = pptx.addSlide();
-    slide4.background = { color: "F1F1F1" };
-    slide4.addText(reportData.sourcesTitle, { x: 0.5, y: 0.5, w: 9, h: 0.75, fontSize: 24, bold: true, color: "363636" });
-    reportData.sourcesItems.forEach((source, index) => {
-        slide4.addText(source, { x: 1, y: 1.5 + (index * 0.5), w: 8.5, h: 0.4, fontSize: 16, color: "363636", bullet: true });
-    });
-
-    // Slide 5: Informações Cadastrais
-    let slide5 = pptx.addSlide();
-    slide5.background = { color: "F1F1F1" };
-    slide5.addText(reportData.infoTitle, { x: 0.5, y: 0.5, w: 9, h: 0.75, fontSize: 24, bold: true, color: "363636" });
-    const tableData = reportData.infoData.map(item => [{ text: item.label, options: { bold: true } }, item.value]);
-    slide5.addTable(tableData, { x: 0.5, y: 1.5, w: 9, rowH: 0.4, colW: [3, 6], border: { type: 'solid', pt: 1, color: 'CCCCCC' }, fontSize: 12, valign: 'middle' });
-
-    // Slide 6: Conclusão
-    let slide6 = pptx.addSlide();
-    slide6.background = { color: "F1F1F1" };
-    slide6.addText(reportData.conclusionTitle, { x: 0.5, y: 0.5, w: 9, h: 0.75, fontSize: 24, bold: true, color: "363636" });
-    slide6.addText(reportData.conclusionBody, { x: 0.5, y: 1.5, w: 9, h: 4, fontSize: 16, color: "363636", align: 'justify' });
-
-    pptx.writeFile({ fileName: "Relatorio_Due_Diligence_Completo.pptx" });
+    pptx.writeFile({ fileName: "Relatorio_Final.pptx" });
   };
 
-  // Renderização de todos os editores de slide
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex justify-between items-center pb-4 border-b">
-        <h1 className="text-3xl font-bold text-gray-800">Editor de Relatório</h1>
-        <button onClick={exportReport} className="px-6 py-2 bg-sky-500 text-white font-semibold rounded-lg shadow-md hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-opacity-75 transition-colors duration-200">
-          Exportar .pptx
-        </button>
-      </div>
-
-      {/* Slide 1: Capa */}
-      <div className="bg-white p-6 rounded-lg shadow-lg border">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Slide 1: Capa</h2>
-        <div className="space-y-4">
-          <div><label className="block text-sm font-medium text-gray-600">Título Principal</label><input type="text" name="title" value={reportData.title} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500" /></div>
-          <div><label className="block text-sm font-medium text-gray-600">Subtítulo</label><input type="text" name="subtitle" value={reportData.subtitle} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500" /></div>
-          <div><label className="block text-sm font-medium text-gray-600">Nome da Sociedade</label><input type="text" name="clientName" value={reportData.clientName} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500" /></div>
+    <div className="p-8">
+      <div className="flex justify-between items-center mb-6 pb-4 border-b">
+        <h1 className="text-3xl font-bold text-gray-800">Editor de Relatório Interativo</h1>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <button onClick={() => changeSlide(activeSlide - 1)} disabled={activeSlide === 0} className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50">Anterior</button>
+            <span className="font-semibold">{`Slide ${activeSlide + 1} de ${slides.length}`}</span>
+            <button onClick={() => changeSlide(activeSlide + 1)} disabled={activeSlide === slides.length - 1} className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50">Próximo</button>
+          </div>
+          <button onClick={exportReport} className="px-6 py-2 bg-sky-500 text-white font-semibold rounded-lg shadow-md hover:bg-sky-600">
+            Exportar .pptx
+          </button>
         </div>
       </div>
 
-      {/* Slide 2: Índice */}
-      <div className="bg-white p-6 rounded-lg shadow-lg border">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Slide 2: Índice</h2>
-        <div className="space-y-4">
-          <div><label className="block text-sm font-medium text-gray-600">Título do Índice</label><input type="text" name="tocTitle" value={reportData.tocTitle} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500" /></div>
-          <div><label className="block text-sm font-medium text-gray-600">Itens do Índice</label>{reportData.tocItems.map((item, index) => (<input key={index} type="text" value={item} onChange={(e) => handleTocItemChange(index, e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 mb-2" />))}</div>
-        </div>
+      <div className="w-full flex justify-center bg-gray-100 p-4">
+        <canvas ref={canvasRef} style={{ border: '1px solid #ccc' }} />
       </div>
-
-      {/* Slide 3: Objeto da Investigação */}
-      <div className="bg-white p-6 rounded-lg shadow-lg border">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Slide 3: Objeto da Investigação</h2>
-        <div className="space-y-4">
-          <div><label className="block text-sm font-medium text-gray-600">Título</label><input type="text" name="objectivesTitle" value={reportData.objectivesTitle} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500" /></div>
-          <div><label className="block text-sm font-medium text-gray-600">Corpo do Texto</label><textarea name="objectivesBody" value={reportData.objectivesBody} onChange={handleInputChange} rows={5} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500" /></div>
-        </div>
-      </div>
-
-      {/* Slide 4: Fontes de Pesquisa */}
-      <div className="bg-white p-6 rounded-lg shadow-lg border">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Slide 4: Fontes de Pesquisa</h2>
-        <div className="space-y-4">
-          <div><label className="block text-sm font-medium text-gray-600">Título</label><input type="text" name="sourcesTitle" value={reportData.sourcesTitle} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500" /></div>
-          <div><label className="block text-sm font-medium text-gray-600">Itens da Lista</label>{reportData.sourcesItems.map((item, index) => (<input key={index} type="text" value={item} onChange={(e) => handleSourceItemChange(index, e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 mb-2" />))}</div>
-        </div>
-      </div>
-
-      {/* Slide 5: Informações Cadastrais */}
-      <div className="bg-white p-6 rounded-lg shadow-lg border">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Slide 5: Informações Cadastrais</h2>
-        <div className="space-y-4">
-          <div><label className="block text-sm font-medium text-gray-600">Título</label><input type="text" name="infoTitle" value={reportData.infoTitle} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500" /></div>
-          <div><label className="block text-sm font-medium text-gray-600">Dados Cadastrais</label>{reportData.infoData.map((item, index) => (<div key={index} className="grid grid-cols-3 gap-4 items-center mb-2"><label className="col-span-1 text-sm font-medium text-gray-700">{item.label}</label><input type="text" value={item.value} onChange={(e) => handleInfoDataChange(index, e.target.value)} className="col-span-2 mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500" /></div>))}</div>
-        </div>
-      </div>
-
-      {/* Slide 7: Conclusão */}
-      <div className="bg-white p-6 rounded-lg shadow-lg border">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Slide 7: Conclusão</h2>
-        <div className="space-y-4">
-          <div><label className="block text-sm font-medium text-gray-600">Título</label><input type="text" name="conclusionTitle" value={reportData.conclusionTitle} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500" /></div>
-          <div><label className="block text-sm font-medium text-gray-600">Corpo do Texto</label><textarea name="conclusionBody" value={reportData.conclusionBody} onChange={handleInputChange} rows={5} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500" /></div>
-        </div>
-      </div>
+       <p className="text-center text-gray-500 mt-4">
+          Clique nos textos para editar. Arraste para mover. Use as alças para redimensionar.
+        </p>
     </div>
   );
 };
