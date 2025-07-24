@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import OCRPage from './pages/OCRPage';
+import ReportPage from './pages/ReportPage'; // Importa a nova página
 import { OCRProvider, useOCR } from './OCRContext';
 import OCRResultModal from './components/OCRResultModal';
 
@@ -18,6 +19,7 @@ const App: React.FC = () => {
         <MainLayout>
           <Routes>
             <Route path="/" element={<OCRPage />} />
+            <Route path="/reports" element={<ReportPage />} /> {/* Adiciona a nova rota */}
           </Routes>
         </MainLayout>
         <AppModal />

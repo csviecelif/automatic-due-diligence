@@ -35,6 +35,13 @@ const AppSidebar: React.FC = () => {
           <DocumentTextIcon className="mr-3 h-5 w-5 flex-shrink-0" aria-hidden="true" />
           OCR de Documentos
         </Link>
+        <Link
+          to="/reports"
+          className="flex items-center px-3 py-2.5 rounded-md text-sm font-medium transition-colors duration-150 ease-in-out text-slate-300 hover:bg-slate-700 hover:text-white"
+        >
+          <DocumentTextIcon className="mr-3 h-5 w-5 flex-shrink-0" aria-hidden="true" />
+          Emissão de Relatórios
+        </Link>
       </nav>
 
       {/* Lista de Documentos OCR */}
