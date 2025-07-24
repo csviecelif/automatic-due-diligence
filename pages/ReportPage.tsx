@@ -83,11 +83,16 @@ const ReportPage: React.FC = () => {
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
     if (canvas) {
+      // Força a limpeza para evitar artefatos
+      canvas.clear();
       canvas.loadFromJSON(slides[activeSlide], () => {
-        canvas.renderAll();
+        // Força a renderização no próximo frame de animação para garantir que o canvas esteja pronto
+        requestAnimationFrame(() => {
+            canvas.renderAll();
+        });
       });
     }
-  }, [activeSlide, slides]);
+  }, [activeSlide]);
 
   const changeSlide = (newSlideIndex: number) => {
     const canvas = fabricCanvasRef.current;
