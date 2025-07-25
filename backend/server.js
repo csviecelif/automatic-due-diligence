@@ -4,9 +4,13 @@ const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const path = require('path');
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const execPromise = promisify(exec);
+const PizZip = require('pizzip');
+const Docxtemplater = require('docxtemplater');
+const PptxModule = require('@docxtemplater/pptx-module');
 
 const app = express();
 const port = 3001;
@@ -106,4 +110,43 @@ app.post('/ocr', upload.single('image'), async (req, res) => {
 
 app.listen(port, () => {
   console.log(`Servidor backend rodando em http://localhost:${port}`);
+});
+
+// Novo endpoint para gerar o relatório PPTX
+app.post('/generate-report-pptx', async (req, res) => {
+    try {
+        const data = req.body; // Dados enviados do frontend
+
+        // Caminho para o seu template PPTX
+        const templatePath = path.resolve(__dirname, 'templates', 'Relatorio_Template.pptx');
+        const content = fs.readFileSync(templatePath, 'binary');
+
+        const zip = new PizZip(content);
+        const doc = new Docxtemplater(zip, {
+            paragraphLoop: true,
+            linebreaks: true,
+            modules: [new PptxModule()], // Adicionar o módulo PPTX
+        });
+
+        doc.setData(data); // Preencher o template com os dados
+        doc.render(); // Renderizar o documento
+
+        const buf = doc.getZip().generate({
+            type: 'nodebuffer',
+            compression: 'DEFLATE',
+        });
+
+        // Enviar o arquivo gerado de volta para o frontend
+        res.setHeader('Content-Disposition', 'attachment; filename="Relatorio_Personalizado.pptx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+        res.send(buf);
+
+    } catch (error) {
+        console.error("Erro ao gerar PPTX:", error);
+        // Tratar erros específicos do docxtemplater
+        if (error.properties) {
+            console.error("Docxtemplater errors:", error.properties.errors);
+        }
+        res.status(500).send('Erro ao gerar o relatório PPTX. Verifique os logs do servidor para mais detalhes.');
+    }
 });
