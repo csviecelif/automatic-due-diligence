@@ -2,15 +2,14 @@ import React, { useRef, useEffect, useState } from 'react';
 import * as fabric from 'fabric';
 import pptxgen from "pptxgenjs";
 
-// --- DEFINIÇÃO DO TEMPLATE ---
+// --- DEFINIÇÃO DO TEMPLATE PADRÃO ---
 const slideTemplates = [
-  // Slide 1: Capa (Valores iniciais para calibração)
   {
     "version": "5.3.0", "objects": [
-      { "type": "textbox", "left": 50, "top": 150, "width": 1000, "fontSize": 75, "fontFamily": "Crimson Pro", "fontWeight": 600, "fill": "#152D47", "text": "Relatório de Due Diligence", "textAlign": "left" },
-      { "type": "textbox", "left": 490, "top": 335, "width": 400, "fontSize": 32, "fontFamily": "Arial", "fontWeight": "bold", "fill": "#6E6E6E", "text": "[NOME DA PESSOA]", "textAlign": "center" },
-      { "type": "rect", "left": 75, "top": 500, "height": 2, "width": 1000, "fill": "#6E6E6E" },
-      { "type": "textbox", "left": 75, "top": 520, "width": 1000, "fontSize": 22, "fontFamily": "Arial", "fill": "#6E6E6E", "textAlign": "justify", "text": "Análise consolidada de informações cadastrais, patrimoniais e do histórico processual para identificação de riscos, inconsistências e subsídios para a estratégia jurídica." }
+      { "type": "textbox", "left": 50, "top": 150, "width": 1000, "fontSize": 75, "fontFamily": "Crimson Pro", "fontWeight": 600, "fill": "#152D47", "text": "Relatório de Due Diligence", "textAlign": "left", "scaleX": 1, "scaleY": 1 },
+      { "type": "textbox", "left": 490, "top": 335, "width": 400, "fontSize": 32, "fontFamily": "Arial", "fontWeight": "bold", "fill": "#6E6E6E", "text": "[NOME DA PESSOA]", "textAlign": "center", "scaleX": 1, "scaleY": 1 },
+      { "type": "rect", "left": 75, "top": 500, "height": 2, "width": 1000, "fill": "#6E6E6E", "scaleX": 1, "scaleY": 1 },
+      { "type": "textbox", "left": 75, "top": 520, "width": 1000, "fontSize": 22, "fontFamily": "Arial", "fill": "#6E6E6E", "textAlign": "justify", "text": "Análise consolidada de informações cadastrais, patrimoniais e do histórico processual para identificação de riscos, inconsistências e subsídios para a estratégia jurídica.", "scaleX": 1, "scaleY": 1 }
     ], "background": "#FFFFFF"
   },
   { "version": "5.3.0", "objects": [ { "type": "textbox", "text": "Slide 2" } ], "background": "#F0F0F0" },
@@ -39,53 +38,126 @@ const ReportPage: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
   
-  const [slides, setSlides] = useState<any[]>(() => JSON.parse(JSON.stringify(slideTemplates)));
+  const [slides, setSlides] = useState<any[]>(() => {
+    try {
+      const savedSlides = localStorage.getItem('calibratedSlides');
+      return savedSlides ? JSON.parse(savedSlides) : JSON.parse(JSON.stringify(slideTemplates));
+    } catch (error) {
+      return JSON.parse(JSON.stringify(slideTemplates));
+    }
+  });
+
   const [activeSlide, setActiveSlide] = useState(0);
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [activeObjectProps, setActiveObjectProps] = useState<any>({});
 
+  // Efeito para salvar no localStorage (roda apenas quando 'slides' muda)
+  useEffect(() => {
+    console.log("DEBUG: useEffect [slides] - Persisting slides to localStorage.");
+    localStorage.setItem('calibratedSlides', JSON.stringify(slides));
+  }, [slides]);
+
   const updateActiveObjectProps = (obj: fabric.Object | null) => {
     if (obj) {
-      const props: any = {
+      setActiveObjectProps({
         left: obj.left?.toFixed(0) || 0,
         top: obj.top?.toFixed(0) || 0,
         width: obj.getScaledWidth().toFixed(0),
         height: obj.getScaledHeight().toFixed(0),
-      };
-      if ((obj as fabric.Textbox).fontSize) {
-        props.fontSize = (obj as fabric.Textbox).fontSize?.toFixed(0) || 0;
-      }
-      setActiveObjectProps(props);
+        fontSize: (obj as fabric.Textbox).fontSize?.toFixed(0) || undefined,
+      });
     } else {
       setActiveObjectProps({});
     }
   };
 
+  // Efeito para inicializar o canvas e os eventos (roda UMA VEZ)
   useEffect(() => {
-    if (!canvasRef.current) return;
-    const canvas = new fabric.Canvas(canvasRef.current, { width: 1152, height: 648, allowTouchScrolling: true });
+    console.log("DEBUG: useEffect [] - Initializing canvas and setting up event listeners.");
+    const canvas = new fabric.Canvas(canvasRef.current!, { width: 1152, height: 648, allowTouchScrolling: true });
     fabricCanvasRef.current = canvas;
 
-    const onObjectSelected = (e: fabric.IEvent) => updateActiveObjectProps(e.target || null);
-    const onObjectModified = (e: fabric.IEvent) => updateActiveObjectProps(e.target || null);
-
-    canvas.on('selection:created', onObjectSelected);
-    canvas.on('selection:updated', onObjectSelected);
-    canvas.on('selection:cleared', () => updateActiveObjectProps(null));
-    canvas.on('object:modified', onObjectModified);
-
-    return () => { canvas.dispose(); };
-  }, []);
-
-  useEffect(() => {
-    const canvas = fabricCanvasRef.current;
-    if (canvas) {
-      canvas.loadFromJSON(slides[activeSlide], () => {
+    // Carregar o slide inicial após a inicialização do canvas
+    const initialSlideData = slides[0]; // Carrega o primeiro slide
+    if (canvas && initialSlideData) {
+      canvas.loadFromJSON(initialSlideData, () => {
+        console.log(`DEBUG: useEffect [] - Applying initial background color: ${initialSlideData.background}`);
+        canvas.backgroundColor = initialSlideData.background || '#FFFFFF';
         canvas.renderAll();
-        updateActiveObjectProps(null);
+      });
+    }
+
+    const updateSlideState = () => {
+      console.log("DEBUG: updateSlideState - Saving canvas state to React state.");
+      setSlides(prevSlides => {
+        const updatedSlides = [...prevSlides];
+        updatedSlides[activeSlide] = canvas.toDatalessJSON();
+        return updatedSlides;
+      });
+    };
+
+    const onObjectModified = (e: fabric.IEvent) => {
+      console.log("DEBUG: Event - object:modified triggered.");
+      const obj = e.target;
+      if (obj) {
+        if (obj.type === 'textbox') {
+          obj.set('width', obj.getScaledWidth());
+          obj.set('scaleX', 1);
+        }
+        updateActiveObjectProps(obj);
+        updateSlideState();
+      }
+    };
+
+    canvas.on('object:modified', onObjectModified);
+    canvas.on('selection:created', (e) => updateActiveObjectProps(e.target || null));
+    canvas.on('selection:updated', (e) => updateActiveObjectProps(e.target || null));
+    canvas.on('selection:cleared', () => updateActiveObjectProps(null));
+
+    return () => {
+      console.log("DEBUG: useEffect [] - Disposing canvas.");
+      canvas.dispose();
+    };
+  }, []); // Dependência vazia para rodar apenas uma vez
+
+  // Efeito para carregar dados do slide (roda quando o slide ativo muda)
+  useEffect(() => {
+    console.log(`DEBUG: useEffect [activeSlide] - Active slide changed to ${activeSlide}. Loading data.`);
+    const canvas = fabricCanvasRef.current;
+    const slideData = slides[activeSlide];
+    if (canvas && slideData) {
+      canvas.loadFromJSON(slideData, () => {
+        console.log(`DEBUG: useEffect [activeSlide] - Applying background color: ${slideData.background}`);
+        canvas.backgroundColor = slideData.background || '#FFFFFF';
+        canvas.renderAll();
       });
     }
   }, [activeSlide]);
+
+  // Efeito para alternar o modo de calibração (roda quando isCalibrating muda)
+  useEffect(() => {
+    console.log(`DEBUG: useEffect [isCalibrating] - Calibration mode changed to ${isCalibrating}.`);
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    console.log("DEBUG: useEffect [isCalibrating] - Setting object properties.");
+    canvas.forEachObject(obj => {
+      const isTextbox = obj.type === 'textbox';
+      obj.set({
+        lockMovementX: !isCalibrating,
+        lockMovementY: !isCalibrating,
+        lockScalingX: !isCalibrating,
+        lockScalingY: !isCalibrating,
+        lockRotation: !isCalibrating,
+        hasControls: isCalibrating,
+        hasBorders: isCalibrating,
+        editable: !isCalibrating && isTextbox,
+      });
+    });
+    canvas.discardActiveObject();
+    console.log("DEBUG: useEffect [isCalibrating] - Rendering all.");
+    canvas.renderAll();
+  }, [isCalibrating]);
 
   const handlePropChange = (prop: string, value: string) => {
     const canvas = fabricCanvasRef.current;
@@ -93,81 +165,117 @@ const ReportPage: React.FC = () => {
     if (obj) {
       const numericValue = parseFloat(value);
       if (!isNaN(numericValue)) {
-        obj.set(prop as any, numericValue);
-        if (prop === 'width') obj.scaleX = numericValue / obj.width!;
-        if (prop === 'height') obj.scaleY = numericValue / obj.height!;
-        canvas?.requestRenderAll();
+        if (prop === 'width') {
+          if (obj.type === 'textbox') {
+            obj.set('width', numericValue);
+            obj.set('scaleX', 1);
+          } else {
+            obj.scaleX = numericValue / obj.width!;
+          }
+        } else if (prop === 'height') {
+          obj.scaleY = numericValue / obj.height!;
+        } else {
+          obj.set(prop as any, numericValue);
+        }
+        
+        canvas.requestRenderAll();
         updateActiveObjectProps(obj);
+        
+        // Atualiza o estado após a renderização para garantir que a UI esteja sincronizada
+        setTimeout(() => {
+            const updatedSlides = [...slides];
+            updatedSlides[activeSlide] = canvas.toDatalessJSON();
+            setSlides(updatedSlides);
+        }, 0);
       }
     }
-  };
-
-  const changeSlide = (newSlideIndex: number) => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas || newSlideIndex < 0 || newSlideIndex >= slides.length) return;
-    const currentJson = canvas.toDatalessJSON();
-    const updatedSlides = [...slides];
-    updatedSlides[activeSlide] = currentJson;
-    setSlides(updatedSlides);
-    setActiveSlide(newSlideIndex);
   };
 
   const exportReport = async () => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
 
-    const finalSlides = [...slides];
-    finalSlides[activeSlide] = canvas.toDatalessJSON();
+    const currentSlideJSON = canvas.toDatalessJSON();
+    const finalSlides = slides.map((slide, index) => 
+      index === activeSlide ? currentSlideJSON : slide
+    );
+    const originalSlideIndex = activeSlide;
 
     const pptx = new pptxgen();
     pptx.defineLayout({ name: 'LAYOUT_CUSTOM_16X9', width: 16, height: 9 });
     pptx.layout = 'LAYOUT_CUSTOM_16X9';
-
-    // Fator de conversão de Pixel para Polegada, baseado no tamanho do slide
-    const PIXELS_PER_INCH = 1152 / 16; // 72 DPI, mas baseado na largura do canvas
+    const PIXELS_PER_INCH = 1152 / 16;
 
     for (const slideData of finalSlides) {
-      const slide = pptx.addSlide();
-      if (slideData.background) {
-        slide.background = { color: slideData.background.replace('#', '') };
-      }
-      
-      const tempCanvas = new fabric.Canvas(null); // Canvas temporário para obter objetos reais
-      await new Promise<void>(resolve => tempCanvas.loadFromJSON(slideData, () => resolve()));
-      const objects = tempCanvas.getObjects();
-
-      objects.forEach((obj: fabric.Object) => {
-        const commonOptions = {
-          x: obj.left! / PIXELS_PER_INCH,
-          y: obj.top! / PIXELS_PER_INCH,
-          w: obj.getScaledWidth() / PIXELS_PER_INCH,
-          h: obj.getScaledHeight() / PIXELS_PER_INCH,
-        };
-
-        if (obj.type === 'textbox') {
-          const textbox = obj as fabric.Textbox;
-          slide.addText(textbox.text!, {
-            ...commonOptions,
-            fontSize: (textbox.fontSize || 12) * (72 / 96), // Conversão correta de Pixel para Ponto
-            fontFace: textbox.fontFamily,
-            color: (textbox.fill || '000000').toString().replace('#', ''),
-            bold: textbox.fontWeight === 'bold' || textbox.fontWeight === 600,
-            italic: textbox.fontStyle === 'italic',
-            underline: textbox.underline,
-            align: textbox.textAlign?.toLowerCase() as any || 'left',
-          });
-        } else if (obj.type === 'rect') {
-          slide.addShape(pptx.shapes.RECTANGLE, {
-            ...commonOptions,
-            fill: { color: (obj.fill || '000000').toString().replace('#', '') },
-            line: { width: 0 },
-          });
+        const slide = pptx.addSlide();
+        if (slideData.background) {
+          const bgColor = new fabric.Color(slideData.background).toHex().replace('#', '');
+          slide.background = { color: bgColor };
         }
+
+        // Criar um novo canvas temporário para cada slide
+        console.log("DEBUG: exportReport - Creating tempElement.");
+        const tempCanvas = await new Promise<fabric.StaticCanvas>(resolve => {
+          const tempElement = document.createElement('canvas');
+          tempElement.width = 1152;
+          tempElement.height = 648;
+          // Anexar temporariamente ao body para garantir que o contexto esteja disponível
+          document.body.appendChild(tempElement); 
+          console.log("DEBUG: exportReport - tempElement created. Creating StaticCanvas.");
+          const staticCanvas = new fabric.StaticCanvas(tempElement);
+          console.log("DEBUG: exportReport - StaticCanvas created. Loading from JSON.");
+          staticCanvas.loadFromJSON(slideData, () => {
+            console.log("DEBUG: exportReport - loadFromJSON callback executed. Rendering all.");
+            staticCanvas.renderAll();
+            resolve(staticCanvas);
+          });
+        });
+        
+        const objects = tempCanvas.getObjects();
+        objects.forEach((obj: fabric.Object) => {
+          const commonOptions = {
+            x: obj.left! / PIXELS_PER_INCH,
+            y: obj.top! / PIXELS_PER_INCH,
+            w: obj.getScaledWidth() / PIXELS_PER_INCH,
+            h: obj.getScaledHeight() / PIXELS_PER_INCH,
+          };
+
+          if (obj.type === 'textbox') {
+            const textbox = obj as fabric.Textbox;
+            const textColor = new fabric.Color(textbox.fill || '#000000').toHex().replace('#', '');
+            slide.addText(textbox.text!, {
+              ...commonOptions,
+              fontSize: (textbox.fontSize || 12) * (72 / 96),
+              fontFace: textbox.fontFamily,
+              color: textColor,
+              bold: textbox.fontWeight === 'bold' || textbox.fontWeight === 600,
+              italic: textbox.fontStyle === 'italic',
+              underline: textbox.underline,
+              align: textbox.textAlign?.toLowerCase() as any || 'left',
+            });
+          } else if (obj.type === 'rect') {
+            const shapeColor = new fabric.Color(obj.fill || '#000000').toHex().replace('#', '');
+            slide.addShape(pptx.shapes.RECTANGLE, {
+              ...commonOptions,
+              fill: { color: shapeColor },
+              line: { width: 0 },
+            });
+          }
+        });
+        // Remover o elemento do DOM antes de descartar o canvas
+        if (tempCanvas.getElement().parentNode) {
+          tempCanvas.getElement().parentNode.removeChild(tempCanvas.getElement());
+        }
+        tempCanvas.dispose(); // Descartar o canvas após a remoção do DOM
+      }
+
+      const originalSlideData = finalSlides[originalSlideIndex];
+      canvas.loadFromJSON(originalSlideData, () => {
+        canvas.backgroundColor = originalSlideData.background || '#FFFFFF';
+        canvas.renderAll();
       });
-      tempCanvas.dispose();
-    }
-    
-    pptx.writeFile({ fileName: "Relatorio_Final.pptx" });
+
+      pptx.writeFile({ fileName: "Relatorio_Final.pptx" });
   };
 
   return (
@@ -179,9 +287,9 @@ const ReportPage: React.FC = () => {
             Modo de Calibração
           </button>
           <div className="flex items-center space-x-2">
-            <button onClick={() => changeSlide(activeSlide - 1)} disabled={activeSlide === 0} className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50">Anterior</button>
+            <button onClick={() => setActiveSlide(activeSlide - 1)} disabled={activeSlide === 0} className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50">Anterior</button>
             <span className="font-semibold">{`Slide ${activeSlide + 1} de ${slides.length}`}</span>
-            <button onClick={() => changeSlide(activeSlide + 1)} disabled={activeSlide === slides.length - 1} className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50">Próximo</button>
+            <button onClick={() => setActiveSlide(activeSlide + 1)} disabled={activeSlide === slides.length - 1} className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50">Próximo</button>
           </div>
           <button onClick={exportReport} className="px-6 py-2 bg-sky-500 text-white font-semibold rounded-lg shadow-md hover:bg-sky-600">
             Exportar .pptx
